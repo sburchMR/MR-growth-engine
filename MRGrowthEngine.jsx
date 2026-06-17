@@ -70,6 +70,41 @@ function Field({ label, value, onChange, rows = 3 }) {
   );
 }
 
+function ProspectInput({ label, value, onChange, placeholder }) {
+  return (
+    <label style={{ flex: "1 1 220px", display: "block", marginBottom: 14 }}>
+      <span
+        style={{
+          display: "block",
+          fontFamily: "Arial, sans-serif",
+          fontSize: 11,
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          color: C.berry,
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          fontFamily: "Georgia, serif",
+          fontSize: 14,
+          color: C.ink,
+          padding: "10px 12px",
+          border: "1px solid " + C.lavender,
+          borderRadius: 6,
+        }}
+      />
+    </label>
+  );
+}
+
 export default function MRGrowthEngine() {
   const [brain, setBrain] = useState(DEFAULT_BRAIN);
 
@@ -83,6 +118,19 @@ export default function MRGrowthEngine() {
   const addProof = () => setBrain((b) => ({ ...b, proof: [...b.proof, ""] }));
   const removeProof = (i) =>
     setBrain((b) => ({ ...b, proof: b.proof.filter((_, j) => j !== i) }));
+
+  const [prospect, setProspect] = useState({
+    name: "",
+    title: "",
+    company: "",
+    industry: "",
+    notes: "",
+  });
+  const setP = (k) => (e) =>
+    setProspect((p) => ({ ...p, [k]: e.target.value }));
+
+  const prospectReady =
+    prospect.title.trim() && prospect.company.trim() && prospect.industry.trim();
 
   return (
     <div
@@ -183,16 +231,75 @@ export default function MRGrowthEngine() {
           <Field label="Voice / style" value={brain.voice} onChange={setField("voice")} />
         </div>
 
+        <h2 style={{ color: C.nightshade, marginTop: 32, marginBottom: 2 }}>Prospect</h2>
+        <p style={{ color: C.berry, marginTop: 0, fontStyle: "italic" }}>
+          Who are we writing to? Title, company, and industry are required.
+        </p>
+
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid " + C.lavender,
+            borderRadius: 10,
+            padding: 24,
+            marginTop: 8,
+          }}
+        >
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <ProspectInput label="Name" value={prospect.name} onChange={setP("name")} placeholder="Jordan Lee" />
+            <ProspectInput label="Title *" value={prospect.title} onChange={setP("title")} placeholder="Chief People Officer" />
+          </div>
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <ProspectInput label="Company *" value={prospect.company} onChange={setP("company")} placeholder="Northwind Retail" />
+            <ProspectInput label="Industry *" value={prospect.industry} onChange={setP("industry")} placeholder="Multi-location retail" />
+          </div>
+          <label style={{ display: "block", marginTop: 4 }}>
+            <span
+              style={{
+                display: "block",
+                fontFamily: "Arial, sans-serif",
+                fontSize: 11,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                color: C.berry,
+                marginBottom: 6,
+              }}
+            >
+              Notes (optional)
+            </span>
+            <textarea
+              value={prospect.notes}
+              onChange={setP("notes")}
+              rows={2}
+              placeholder="Anything specific — a trigger event, mutual connection, recent announcement…"
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                fontFamily: "Georgia, serif",
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: C.ink,
+                padding: "10px 12px",
+                border: "1px solid " + C.lavender,
+                borderRadius: 6,
+                resize: "vertical",
+              }}
+            />
+          </label>
+        </div>
+
         <p
           style={{
             fontFamily: "Arial, sans-serif",
             fontSize: 12,
-            color: C.nightshade,
-            opacity: 0.6,
+            color: prospectReady ? C.berry : C.nightshade,
+            opacity: prospectReady ? 1 : 0.6,
             marginTop: 14,
           }}
         >
-          Next: prospect input → sequence generation.
+          {prospectReady
+            ? "Ready to generate. (Generation lands in Step 3.)"
+            : "Next: fill title, company, and industry → then sequence generation."}
         </p>
       </div>
     </div>
