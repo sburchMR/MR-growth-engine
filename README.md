@@ -15,7 +15,7 @@ v1 — in active build. Built step by step:
 - [x] Step 0 — Scaffold
 - [x] Step 1 — Offer Brain panel (editable source of truth)
 - [x] Step 2 — Single prospect input
-- [ ] Step 3 — 4-step sequence generation (open / proof / angle / breakup)
+- [x] Step 3 — 4-step sequence generation (open / proof / angle / breakup)
 - [ ] Step 4 — A/B variants (subjects + CTAs) + tracking
 - [ ] Step 5 — Tailored one-pager per prospect
 - [ ] Step 6 — CSV batch

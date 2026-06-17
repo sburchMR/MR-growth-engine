@@ -132,6 +132,99 @@ export default function MRGrowthEngine() {
   const prospectReady =
     prospect.title.trim() && prospect.company.trim() && prospect.industry.trim();
 
+  const [tone, setTone] = useState("peer-proof");
+  const [seq, setSeq] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [genError, setGenError] = useState("");
+
+  const TONES = {
+    "peer-proof": {
+      label: "Peer-with-proof",
+      guide:
+        "Open peer-to-peer (one People leader to another) and work ONE concrete proof point in early. Balanced. The ask is a short conversation, not a demo.",
+    },
+    "pure-peer": {
+      label: "Pure peer",
+      guide:
+        "Open entirely on a shared problem or insight. No proof points in the first email; save them for follow-ups. The ask is just a conversation.",
+    },
+    "direct-value": {
+      label: "Direct value",
+      guide:
+        "Name the outcome and the meeting ask quickly. Lead with the result they'd get. Concise and confident, still warm — never hypey.",
+    },
+  };
+
+  function buildPrompt() {
+    const proofList = brain.proof.filter(Boolean).map((p) => "- " + p).join("\n");
+    const who = prospect.name ? prospect.name + ", " : "";
+    return [
+      "You are writing a 4-step cold email sequence on behalf of a real person. Write in HER voice, never as a vendor.",
+      "",
+      "=== HER OFFER BRAIN (source of truth — do not invent beyond this) ===",
+      "Identity: " + brain.identity,
+      "Thesis: " + brain.thesis,
+      "Model: " + brain.model,
+      "Proof points:\n" + proofList,
+      "Offer: " + brain.offer,
+      "Voice: " + brain.voice,
+      "",
+      "=== PROSPECT ===",
+      who + prospect.title + " at " + prospect.company + " (" + prospect.industry + ")",
+      prospect.notes ? "Notes: " + prospect.notes : "",
+      "",
+      "=== TONE FOR THIS SEQUENCE ===",
+      TONES[tone].guide,
+      "",
+      "=== RULES ===",
+      "- Audience is a senior People leader (CPO/CHRO/Head of People). Write peer-to-peer.",
+      "- Anchor to a plausible OKR this person likely owns this year. Be specific to their title + industry.",
+      "- 4 emails: (1) cold open, (2) proof/value, (3) different angle, (4) soft breakup.",
+      "- Each email: tight. Email 1 under 90 words. No buzzword soup, no fake urgency, no 'hope this finds you well'.",
+      "- Only use proof points that are TRUE per the brain. Never invent numbers or fabricate details about their company.",
+      "- Sign emails as '— Shlanda'.",
+      "- Subjects: lowercase-ish, human, curiosity or relevance — not salesy.",
+      "- send_day: integer day offset from first send (email 1 = 0).",
+      "",
+      "Return ONLY valid JSON, no markdown, no preamble, in exactly this shape:",
+      '{"okr_anchor":"one line naming the OKR you anchored to","emails":[{"step":1,"label":"Cold open","subject":"...","body":"...","send_day":0},{"step":2,"label":"Proof / value","subject":"...","body":"...","send_day":3},{"step":3,"label":"Different angle","subject":"...","body":"...","send_day":7},{"step":4,"label":"Soft breakup","subject":"...","body":"...","send_day":12}]}',
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  async function generate() {
+    setLoading(true);
+    setGenError("");
+    setSeq(null);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 2000,
+          messages: [{ role: "user", content: buildPrompt() }],
+        }),
+      });
+      const data = await res.json();
+      const text = (data.content || [])
+        .filter((b) => b.type === "text")
+        .map((b) => b.text)
+        .join("\n")
+        .replace(/```json|```/g, "")
+        .trim();
+      const parsed = JSON.parse(text);
+      setSeq(parsed);
+    } catch (err) {
+      setGenError(
+        "Couldn't generate a clean sequence. Try again — if it keeps failing, the model returned something unparseable."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div
       style={{
@@ -288,19 +381,130 @@ export default function MRGrowthEngine() {
           </label>
         </div>
 
-        <p
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 18, flexWrap: "wrap" }}>
+          <span
+            style={{
+              fontFamily: "Arial, sans-serif",
+              fontSize: 11,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+              color: C.berry,
+              marginRight: 4,
+            }}
+          >
+            Tone
+          </span>
+          {Object.entries(TONES).map(([key, t]) => (
+            <button
+              key={key}
+              onClick={() => setTone(key)}
+              style={{
+                fontFamily: "Arial, sans-serif",
+                fontSize: 13,
+                padding: "6px 12px",
+                borderRadius: 20,
+                cursor: "pointer",
+                border: "1px solid " + (tone === key ? C.berry : C.lavender),
+                background: tone === key ? C.berry : "#fff",
+                color: tone === key ? "#fff" : C.nightshade,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={generate}
+          disabled={!prospectReady || loading}
           style={{
+            marginTop: 16,
             fontFamily: "Arial, sans-serif",
-            fontSize: 12,
-            color: prospectReady ? C.berry : C.nightshade,
-            opacity: prospectReady ? 1 : 0.6,
-            marginTop: 14,
+            fontSize: 15,
+            fontWeight: "bold",
+            padding: "12px 24px",
+            borderRadius: 8,
+            border: "none",
+            cursor: prospectReady && !loading ? "pointer" : "not-allowed",
+            background: prospectReady && !loading ? C.nightshade : C.lavender,
+            color: "#fff",
           }}
         >
-          {prospectReady
-            ? "Ready to generate. (Generation lands in Step 3.)"
-            : "Next: fill title, company, and industry → then sequence generation."}
-        </p>
+          {loading ? "Writing the sequence…" : "Generate sequence"}
+        </button>
+
+        {genError && (
+          <p style={{ color: C.berry, fontFamily: "Arial, sans-serif", fontSize: 13, marginTop: 12 }}>
+            {genError}
+          </p>
+        )}
+
+        {seq && (
+          <div style={{ marginTop: 24 }}>
+            {seq.okr_anchor && (
+              <p
+                style={{
+                  fontFamily: "Arial, sans-serif",
+                  fontSize: 12,
+                  color: C.berry,
+                  background: "#fff",
+                  border: "1px solid " + C.lavender,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                }}
+              >
+                <strong>Anchored to:</strong> {seq.okr_anchor}
+              </p>
+            )}
+            {(seq.emails || []).map((em) => (
+              <div
+                key={em.step}
+                style={{
+                  background: "#fff",
+                  border: "1px solid " + C.lavender,
+                  borderRadius: 10,
+                  padding: 20,
+                  marginBottom: 14,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontSize: 11,
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    color: C.berry,
+                    marginBottom: 8,
+                  }}
+                >
+                  Email {em.step} · {em.label} · day {em.send_day}
+                </div>
+                <div style={{ fontWeight: "bold", color: C.nightshade, marginBottom: 8 }}>
+                  Subject: {em.subject}
+                </div>
+                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: C.ink }}>
+                  {em.body}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!seq && (
+          <p
+            style={{
+              fontFamily: "Arial, sans-serif",
+              fontSize: 12,
+              color: prospectReady ? C.berry : C.nightshade,
+              opacity: prospectReady ? 1 : 0.6,
+              marginTop: 14,
+            }}
+          >
+            {prospectReady
+              ? "Ready. Pick a tone and generate."
+              : "Fill title, company, and industry to enable generation."}
+          </p>
+        )}
       </div>
     </div>
   );
