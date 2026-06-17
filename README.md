@@ -13,7 +13,7 @@ copy ready to drop into a sender (Instantly).
 v1 — in active build. Built step by step:
 
 - [x] Step 0 — Scaffold
-- [ ] Step 1 — Offer Brain panel (editable source of truth)
+- [x] Step 1 — Offer Brain panel (editable source of truth)
 - [ ] Step 2 — Single prospect input
 - [ ] Step 3 — 4-step sequence generation (open / proof / angle / breakup)
 - [ ] Step 4 — A/B variants (subjects + CTAs) + tracking
